@@ -3,487 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Gaji Bulanan - AR Developer</title>
-    <!-- html2pdf.js CDN untuk Ekspor PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>Pro Speedometer & GPS Tracker</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --danger-hover: #b91c1c;
-            --background: #f8fafc;
-            --text: #1e293b;
-            --border: #e2e8f0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --primary: #00ff88;
+            --bg: #121212;
+            --panel: rgba(30, 30, 30, 0.9);
         }
 
         body {
-            background-color: var(--background);
-            color: var(--text);
-            padding: 2rem 1rem;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 1rem;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            color: #0f172a;
-        }
-
-        /* Ringkasan Keuangan */
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .card {
-            background: #f1f5f9;
-            padding: 1.5rem;
-            border-radius: 8px;
-            border-left: 5px solid var(--primary);
-        }
-
-        .card.success { border-left-color: var(--success); }
-        .card.danger { border-left-color: var(--danger); }
-
-        .card-title {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #64748b;
-            margin-bottom: 0.5rem;
-        }
-
-        .card-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        /* Form Tambah Pengeluaran */
-        .form-section {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            border: 1px solid var(--border);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
-            gap: 1rem;
-            align-items: flex-end;
-        }
-
-        .form-group {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: white;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            height: 100vh;
         }
 
-        label {
-            font-size: 0.875rem;
-            font-weight: 600;
+        /* Speedometer Section */
+        #dashboard {
+            height: 40%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #1e1e1e 0%, #121212 100%);
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        input, select {
-            padding: 0.625rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+        .speed-container {
+            text-align: center;
         }
 
-        input:focus, select:focus {
-            border-color: var(--primary);
+        .speed-value {
+            font-size: 80px;
+            font-weight: bold;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .speed-unit {
+            font-size: 20px;
+            color: #888;
+            letter-spacing: 2px;
+        }
+
+        /* Map Section */
+        #map {
+            flex-grow: 1;
+            z-index: 5;
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         button {
-            padding: 0.625rem 1.25rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
+            background: var(--panel);
+            color: white;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 50%;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        button:active { transform: scale(0.98); }
-
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        
-        .btn-success { background-color: var(--success); color: white; }
-        .btn-success:hover { background: #15803d; }
-
-        .btn-danger { background-color: var(--danger); color: white; }
-        .btn-danger:hover { background-color: var(--danger-hover); }
-
-        /* Tabel Data */
-        .table-container {
-            overflow-x: auto;
-            margin-bottom: 1.5rem;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th, td {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th {
-            background-color: #f1f5f9;
-            font-weight: 600;
-        }
-
-        .actions-cell {
+            width: 50px;
+            height: 50px;
             display: flex;
-            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+            transition: 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
-        .btn-sm {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-            border-radius: 4px;
+        button.active {
+            background: var(--primary);
+            color: black;
+            border-color: var(--primary);
         }
 
-        .footer-credit {
-            text-align: center;
-            margin-top: 2rem;
-            font-size: 0.85rem;
-            color: #94a3b8;
-        }
-
-        /* Area Cetak PDF Khusus */
-        #pdf-area {
-            padding: 10px;
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--panel);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            border: 1px solid #333;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="pdf-area">
-        <header>
-            <div>
-                <h1>Rekap Pencatatan Gaji Bulanan</h1>
-                <p style="color: #64748b; font-size: 0.9rem;">Kelola finansial dan keperluan alokasi dana</p>
-            </div>
-            <!-- Pilihan Bulan -->
-            <div class="form-group" style="min-width: 150px;">
-                <select id="bulan-pilihan" onchange="gantiBulan()">
-                    <option value="Januari">Januari</option>
-                    <option value="Februari">Februari</option>
-                    <option value="Maret">Maret</option>
-                    <option value="April">April</option>
-                    <option value="Mei" selected>Mei</option>
-                    <option value="Juni">Juni</option>
-                    <option value="Juli">Juli</option>
-                    <option value="Agustus">Agustus</option>
-                    <option value="September">September</option>
-                    <option value="Oktober">Oktober</option>
-                    <option value="November">November</option>
-                    <option value="Desember">Desember</option>
-                </select>
-            </div>
-        </header>
-
-        <!-- Input Gaji Utama -->
-        <div class="form-section" style="background: #eff6ff; border-color: #bfdbfe;">
-            <div class="form-row" style="grid-template-columns: 1fr auto;">
-                <div class="form-group">
-                    <label for="gaji-pokok">Total Gaji Bulan Ini (Rp)</label>
-                    <input type="number" id="gaji-pokok" value="5000000" oninput="hitungKeuangan()" placeholder="Masukkan total gaji">
-                </div>
-                <div></div>
-            </div>
+    <div id="dashboard">
+        <div class="speed-container">
+            <div id="speedText" class="speed-value">0</div>
+            <div class="speed-unit">KM/H</div>
         </div>
-
-        <!-- Ringkasan Finansial -->
-        <div class="summary-cards">
-            <div class="card">
-                <div class="card-title">Total Pendapatan</div>
-                <div class="card-value" id="view-pendapatan">Rp 0</div>
-            </div>
-            <div class="card danger">
-                <div class="card-title">Total Keperluan</div>
-                <div class="card-value" id="view-keperluan">Rp 0</div>
-            </div>
-            <div class="card success">
-                <div class="card-title">Sisa Saldo (Tabungan)</div>
-                <div class="card-value" id="view-sisa">Rp 0</div>
-            </div>
-        </div>
-
-        <!-- Tabel Data Rincian Keperluan -->
-        <div class="table-container">
-            <table id="tabel-rekap">
-                <thead>
-                    <tr id="header-row">
-                        <th>Keperluan / Alokasi</th>
-                        <th>Nominal (Rp)</th>
-                        <th>Kategori</th>
-                        <th class="no-pdf">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="body-rekap">
-                    <!-- Data di-generate otomatis oleh JS -->
-                </tbody>
-            </table>
-        </div>
+        <div class="status-badge" id="status">GPS: Menunggu Sinyal...</div>
     </div>
 
-    <!-- Panel Kontrol & Fitur Tambah Kolom/Baris -->
-    <div class="form-section">
-        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Tambah Keperluan Baru</h3>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="input-nama">Nama Keperluan</label>
-                <input type="text" id="input-nama" placeholder="Contoh: Bayar Listrik / Wifi">
-            </div>
-            <div class="form-group">
-                <label for="input-nominal">Nominal (Rp)</label>
-                <input type="number" id="input-nominal" placeholder="Contoh: 150000">
-            </div>
-            <!-- Kolom Dinamis Kategori (Bisa menyesuaikan jika kolom baru ditambahkan) -->
-            <div class="form-group" id="dynamic-inputs-container">
-                <label for="input-kategori">Kategori</label>
-                <input type="text" id="input-kategori" placeholder="Contoh: Rutin / Investasi">
-            </div>
-            <button class="btn-primary" onclick="tambahBaris()">Tambah</button>
-        </div>
+    <div id="map"></div>
+
+    <div class="controls">
+        <button id="lockBtn" class="active" title="Kunci Posisi">
+            📍
+        </button>
     </div>
 
-    <!-- Fitur Tambah Struktur Kolom Baru & Ekspor -->
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; margin-top: 1rem;">
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn-success" onclick="tambahKolomStruktur()">+ Tambah Kolom Struktur Baru</button>
-        </div>
-        <button class="btn-primary" style="background-color: #0f172a;" onclick="eksporPDF()">Cetak / Ekspor ke PDF</button>
-    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <div class="footer-credit">AR DEVELOPER ❤️</div>
-</div>
-
-<script>
-    // Database struktur data default (Disimpan sementara di memory runtime, bisa dikembangkan ke localStorage)
-    let dataKeperluan = [
-        { id: 1, nama: "Angsuran & Tagihan", nominal: 1200000, kategori: "Wajib" },
-        { id: 2, nama: "Belanja Bulanan", nominal: 800000, kategori: "Kebutuhan" },
-        { id: 3, nama: "Dana Darurat / LiFePO4 Project", nominal: 500000, kategori: "Investasi" }
-    ];
-
-    let kolomKustom = []; // Menyimpan nama header untuk kolom tambahan baru
-
-    // Inisialisasi awal aplikasi saat dimuat
-    window.onload = function() {
-        renderTabel();
-    };
-
-    // Fungsi Render struktur tabel utama
-    function renderTabel() {
-        const tbody = document.getElementById("body-rekap");
-        tbody.innerHTML = "";
-
-        dataKeperluan.forEach((item) => {
-            const tr = document.createElement("tr");
-
-            // Menggunakan contenteditable agar user bisa langsung EDIT nominal atau nama di tempat!
-            tr.innerHTML = `
-                <td contenteditable="true" onblur="updateData(${item.id}, 'nama', this.innerText)">${item.nama}</td>
-                <td contenteditable="true" style="font-weight: 600;" onblur="updateData(${item.id}, 'nominal', this.innerText, true)">${item.nominal}</td>
-                <td contenteditable="true" onblur="updateData(${item.id}, 'kategori', this.innerText)">${item.kategori || '-'}</td>
-                ${kolomKustom.map(kolom => `
-                    <td contenteditable="true" onblur="updateData(${item.id}, '${kolom}', this.innerText)">${item[kolom] || '-'}</td>
-                `).join('')}
-                <td class="actions-cell no-pdf">
-                    <button class="btn-danger btn-sm" onclick="hapusBaris(${item.id})">Hapus</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        hitungKeuangan();
-    }
-
-    // Mengupdate data saat sel tabel diedit langsung oleh user
-    function updateData(id, field, value, isNumber = false) {
-        let item = dataKeperluan.find(d => d.id === id);
-        if (item) {
-            if (isNumber) {
-                // Menghilangkan karakter non-angka jika user salah ketik
-                let cleanNum = value.replace(/[^0-9]/g, '');
-                item[field] = Number(cleanNum) || 0;
-            } else {
-                item[field] = value;
+    <script>
+        /**
+         * 1. ALGORITMA KALMAN FILTER
+         */
+        class KalmanFilter {
+            constructor(q = 0.0001, r = 0.001) {
+                this.q = q; // Process noise
+                this.r = r; // Measurement noise
+                this.x = null; // Estimated value
+                this.p = 1;    // Estimation error
             }
-            hitungKeuangan();
+
+            filter(measurement) {
+                if (this.x === null) {
+                    this.x = measurement;
+                    return measurement;
+                }
+                this.p = this.p + this.q;
+                let k = this.p / (this.p + this.r);
+                this.x = this.x + k * (measurement - this.x);
+                this.p = (1 - k) * this.p;
+                return this.x;
+            }
         }
-    }
 
-    // Fungsi Hitung Otomatis Total Gaji, Pengeluaran, dan Sisa Saldo
-    function hitungKeuangan() {
-        const gajiInput = document.getElementById("gaji-pokok").value;
-        const totalGaji = Number(gajiInput) || 0;
+        // Inisialisasi Filter untuk Lat dan Lng
+        const latFilter = new KalmanFilter();
+        const lngFilter = new KalmanFilter();
 
-        let totalKeperluan = dataKeperluan.reduce((sum, item) => sum + Number(item.nominal), 0);
-        let sisaSaldo = totalGaji - totalKeperluan;
+        /**
+         * 2. INISIALISASI PETA (LEAFLET)
+         */
+        const map = L.map('map', {
+            zoomControl: false 
+        }).setView([0, 0], 2);
 
-        // Tampilkan ke komponen UI widget ringkasan
-        document.getElementById("view-pendapatan").innerText = formatRupiah(totalGaji);
-        document.getElementById("view-keperluan").innerText = formatRupiah(totalKeperluan);
-        
-        const sisaElement = document.getElementById("view-sisa");
-        sisaElement.innerText = formatRupiah(sisaSaldo);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
 
-        // Berikan warning visual jika sisa minus (overbudget)
-        if (sisaSaldo < 0) {
-            sisaElement.style.color = "var(--danger)";
+        let pathLine = L.polyline([], {color: '#00ff88', weight: 4}).addTo(map);
+        let userMarker = L.circleMarker([0,0], {
+            radius: 8,
+            fillColor: "#00ff88",
+            color: "#fff",
+            weight: 2,
+            fillOpacity: 1
+        }).addTo(map);
+
+        /**
+         * 3. LOGIKA LOCK TO POSITION
+         */
+        let isLocked = true;
+        const lockBtn = document.getElementById('lockBtn');
+
+        lockBtn.addEventListener('click', () => {
+            isLocked = !isLocked;
+            lockBtn.classList.toggle('active', isLocked);
+            if(isLocked) {
+                const center = userMarker.getLatLng();
+                if(center.lat !== 0) map.panTo(center);
+            }
+        });
+
+        // Jika user menggeser peta secara manual, matikan lock
+        map.on('dragstart', () => {
+            isLocked = false;
+            lockBtn.classList.remove('active');
+        });
+
+        /**
+         * 4. GEOLOCATION TRACKING
+         */
+        const speedText = document.getElementById('speedText');
+        const statusBadge = document.getElementById('status');
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const rawLat = position.coords.latitude;
+                    const rawLng = position.coords.longitude;
+                    
+                    // Gunakan Kalman Filter
+                    const sLat = latFilter.filter(rawLat);
+                    const sLng = lngFilter.filter(rawLng);
+                    const newPos = [sLat, sLng];
+
+                    // Update UI Kecepatan (m/s ke km/h)
+                    let speed = position.coords.speed || 0; 
+                    if (speed < 0) speed = 0;
+                    const kmh = Math.round(speed * 3.6);
+                    speedText.innerText = kmh;
+
+                    // Update Marker & Jalur
+                    userMarker.setLatLng(newPos);
+                    pathLine.addLatLng(newPos);
+
+                    // Update Peta jika di-lock
+                    if (isLocked) {
+                        map.setView(newPos, 17);
+                    }
+
+                    statusBadge.innerText = `Akurasi: ${Math.round(position.coords.accuracy)}m`;
+                },
+                (err) => {
+                    statusBadge.innerText = "Error: " + err.message;
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 1000,
+                    timeout: 5000
+                }
+            );
         } else {
-            sisaElement.style.color = "var(--success)";
+            statusBadge.innerText = "Geolocation tidak didukung browser ini.";
         }
-    }
-
-    // Fungsi Tambah Data Keperluan Baru (Baris)
-    function tambahBaris() {
-        const nama = document.getElementById("input-nama").value;
-        const nominal = document.getElementById("input-nominal").value;
-        const kategori = document.getElementById("input-kategori").value;
-
-        if (!nama || !nominal) {
-            alert("Nama keperluan dan nominal wajib diisi!");
-            return;
-        }
-
-        let itemBaru = {
-            id: Date.now(), // Generate ID unik memakai timestamp
-            nama: nama,
-            nominal: Number(nominal),
-            kategori: kategori || "Rutin"
-        };
-
-        // Jika ada struktur kolom kustom ekstra, tambahkan field kosong default
-        kolomKustom.forEach(kolom => {
-            itemBaru[kolom] = "-";
-        });
-
-        dataKeperluan.push(itemBaru);
-        renderTabel();
-
-        // Reset input form boks
-        document.getElementById("input-nama").value = "";
-        document.getElementById("input-nominal").value = "";
-        document.getElementById("input-kategori").value = "";
-    }
-
-    // Fungsi Hapus Baris Data
-    function hapusBaris(id) {
-        if(confirm("Apakah kamu yakin ingin menghapus alokasi keperluan ini?")) {
-            dataKeperluan = dataKeperluan.filter(item => item.id !== id);
-            renderTabel();
-        }
-    }
-
-    // Fitur Keren: Menambah Kolom Struktur Baru Secara Dinamis di Tabel
-    function tambahKolomStruktur() {
-        let namaKolomBaru = prompt("Masukkan nama kolom struktur baru yang diinginkan:\n(Contoh: Batas Waktu, Keterangan, Urgensi)");
-        
-        if (namaKolomBaru && namaKolomBaru.trim() !== "") {
-            let namaClean = namaKolomBaru.trim();
-            kolomKustom.push(namaClean);
-
-            // 1. Perbarui header HTML tabel
-            const headerRow = document.getElementById("header-row");
-            const th = document.createElement("th");
-            th.innerText = namaClean;
-            // Sisipkan sebelum kolom aksi terakhir
-            headerRow.insertBefore(th, headerRow.lastElementChild);
-
-            // 2. Perbarui form input di bawah agar memiliki input field baru yang sesuai kolom terbuat
-            const formContainer = document.getElementById("dynamic-inputs-container");
-            const newGroup = document.createElement("div");
-            newGroup.className = "form-group";
-            newGroup.innerHTML = `
-                <label>${namaClean}</label>
-                <input type="text" id="input-kustom-${namaClean}" placeholder="Isi ${namaClean}">
-            `;
-            // Sisipkan field input baru tersebut ke DOM
-            formContainer.parentNode.insertBefore(newGroup, formContainer.nextSibling);
-
-            // Reset dan render ulang data untuk menyeimbangkan baris tabel
-            renderTabel();
-        }
-    }
-
-    // Trigger ganti pilihan bulan rekap
-    function gantiBulan() {
-        const bulan = document.getElementById("bulan-pilihan").value;
-        // Opsional: Disini bisa ditaruh fungsi fetch/load data khusus bulan terpilih jika sudah pakai backend.
-        alert("Pindah rekap log keuangan ke bulan: " + bulan);
-    }
-
-    // Helper format mata uang Rupiah
-    function formatRupiah(angka) {
-        return "Rp " + angka.toLocaleString("id-ID");
-    }
-
-    // Fitur Inti Ekspor PDF bersih tanpa tombol ikut tercetak
-    function eksporPDF() {
-        const elemenCetak = document.getElementById("pdf-area");
-        const bulanText = document.getElementById("bulan-pilihan").value;
-
-        // Konfigurasi plugin ekspor dokumen html2pdf
-        const opsi = {
-            margin:       0.5,
-            filename:     `Rekap_Gaji_${bulanText}_2026.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        // Menyembunyikan kolom aksi sementara waktu saat render cetak agar PDF terlihat rapi profesional
-        const elemenAksi = document.querySelectorAll('.no-pdf');
-        elemenAksi.forEach(el => el.style.display = 'none');
-
-        // Jalankan proses unduh PDF berkas
-        html2pdf().set(opsi).from(elemenCetak).save().then(() => {
-            // Kembalikan tampilan kolom aksi di web setelah proses generate PDF selesai
-            elemenAksi.forEach(el => el.style.display = '');
-        });
-    }
-</script>
-
+    </script>
 </body>
 </html>
 
