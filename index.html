@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Next-Gen Cockpit with Maps</title>
+    <title>Scania Next-Gen Cockpit Navigation</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -22,7 +22,6 @@
             overflow: hidden;
         }
 
-        /* Container Utama membagi layar: Atas Peta, Bawah Speedometer */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -30,38 +29,39 @@
             width: 100%;
         }
 
-        /* Area Peta (Keren & Fullscreen di bagian atas) */
+        /* Area Peta - Berbagi ruang secara proporsional */
         #map {
             flex: 1;
             width: 100%;
-            background-color: #111;
+            background-color: #1a1e24;
         }
 
-        /* Panel Dashboard Bawah (Gaya Scania Modern) */
+        /* BAR SPEEDOMETER DITAIKKAN (Tinggi diubah dari 240px ke 280px agar lebih ke atas) */
         .scania-dashboard {
-            height: 240px;
-            background: linear-gradient(to top, #07090b 80%, #11161d 100%);
-            border-top: 3px solid #2e3846;
+            height: 280px; 
+            background: linear-gradient(to top, #06080a 85%, #151b22 100%);
+            border-top: 4px solid #3a4659;
             display: flex;
             align-items: center;
             justify-content: space-evenly;
-            padding: 10px 20px;
+            padding: 15px 10px;
             position: relative;
-            box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
-            z-index: 1000; /* Agar di atas peta */
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.9);
+            z-index: 1000;
         }
 
-        /* Lingkaran Speedometer Kiri */
+        /* Ukuran Lingkaran Speedometer Analog Diperbesar sedikit agar lebih gagah */
         .scania-cluster {
             position: relative;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle, #12161b 60%, #080a0d 100%);
-            border: 4px solid #242b35;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #13181f 60%, #07090c 100%);
+            border: 5px solid #2e3745;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
         .gauge-track {
@@ -80,55 +80,59 @@
             height: 100%;
             border-radius: 50%;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 12px;
             color: #9ca3af;
         }
 
         .num { position: absolute; width: 20px; height: 20px; text-align: center; line-height: 20px; }
-        .n0   { top: 125px; left: 30px; }
-        .n40  { top: 35px;  left: 32px; }
-        .n80  { top: 25px;  left: 105px;}
-        .n120 { top: 110px; left: 130px; color: #ff453a; }
+        .n0   { top: 145px; left: 35px; }
+        .n20  { top: 85px;  left: 18px; }
+        .n40  { top: 35px;  left: 40px; }
+        .n65  { top: 15px;  left: 90px; }
+        .n80  { top: 30px;  left: 138px;}
+        .n100 { top: 75px;  left: 162px; color: #ff453a;}
+        .n120 { top: 135px; left: 148px; color: #ff453a; }
 
         .pointer-needle {
             position: absolute;
-            width: 3px;
-            height: 70px;
+            width: 4px;
+            height: 82px;
             background: #ff2a2a;
             bottom: 50%;
-            left: calc(50% - 1.5px);
+            left: calc(50% - 2px);
             transform-origin: bottom center;
             transform: rotate(-120deg);
             transition: transform 0.2s ease-out;
             z-index: 3;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
         }
 
         .center-cap {
             position: absolute;
-            width: 25px;
-            height: 25px;
+            width: 30px;
+            height: 30px;
             background: #111418;
-            border: 2px solid #3a4451;
+            border: 2px solid #485569;
             border-radius: 50%;
             z-index: 4;
         }
 
-        /* Layar Komputer MID Kanan (Sangat Modern) */
+        /* Ukuran Layar MID Digital Juga Diperbesar */
         .scania-mid-display {
-            background: #040608;
+            background: #030507;
             border: 2px solid #45a29e;
-            width: 160px;
-            padding: 15px 10px;
+            width: 180px;
+            height: 120px;
             border-radius: 8px;
             text-align: center;
-            box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.05);
+            box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
         .digital-speed {
-            font-size: 54px;
+            font-size: 64px;
             font-weight: 900;
             color: #ffffff;
             font-family: 'Arial Black', sans-serif;
@@ -137,7 +141,7 @@
         }
 
         .unit {
-            font-size: 11px;
+            font-size: 12px;
             color: #45a29e;
             font-weight: bold;
             letter-spacing: 2px;
@@ -145,13 +149,12 @@
             margin-top: 5px;
         }
 
-        /* Bar Status GPS di paling bawah */
         .satellite-status {
             position: absolute;
-            bottom: 5px;
+            bottom: 8px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
             letter-spacing: 1px;
             color: #526274;
@@ -169,8 +172,11 @@
                 <div class="gauge-track"></div>
                 <div class="gauge-numbers">
                     <div class="num n0">0</div>
+                    <div class="num n20">20</div>
                     <div class="num n40">40</div>
+                    <div class="num n65">65</div>
                     <div class="num n80">80</div>
+                    <div class="num n100">100</div>
                     <div class="num n120">120</div>
                 </div>
                 <div class="pointer-needle" id="needle"></div>
@@ -195,24 +201,34 @@
         let map, marker;
         let mapInitialized = false;
 
-        // 1. Inisialisasi Peta Awal (Default posisi Jakarta sebelum GPS mengunci)
+        // Inisialisasi Peta
         function initMap(lat, lng) {
             map = L.map('map', {
-                zoomControl: false, // Sembunyikan tombol +/- agar terlihat clean seperti HUD Bus
+                zoomControl: false, 
                 attributionControl: false
             }).setView([lat, lng], 16);
 
-            // Menggunakan tema peta Dark Mode / CartoDB Dark Matter agar serasi dengan Scania
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
+            // PERBAIKAN: Menggunakan tile map "Jawg Matrix" / OpenStreetMap dengan teks label jalan lengkap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                // Menggunakan filter CSS bawaan browser agar petanya otomatis berubah menjadi bergaya malam (Dark-Mode) namun teks nama jalan tetap terlihat jelas kontras putih.
+                className: 'dark-map-tiles'
             }).addTo(map);
 
-            // Membuat penanda posisi kendaraan
+            // Inject CSS filter langsung agar peta berwarna gelap tanpa menghilangkan tulisan nama jalan
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .dark-map-tiles {
+                    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+                }
+            `;
+            document.head.appendChild(style);
+
             marker = L.marker([lat, lng]).addTo(map);
             mapInitialized = true;
         }
 
-        // 2. Fungsi update dashboard Scania (0 km/h = -120deg, 120 km/h = 110deg)
+        // Fungsi update dashboard Scania (0 km/h = -120deg, 120 km/h = 110deg)
         function updateScaniaDashboard(speed) {
             let safeSpeed = Math.min(speed, 120); 
             let degrees = -120 + (safeSpeed * 1.916); 
@@ -221,10 +237,9 @@
             needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // 3. Menghubungkan ke Hardware GPS HP Anda
+        // Deteksi GPS HP
         if ('geolocation' in navigator) {
-            // Set default peta sementara di koordinat umum (Jakarta) saat loading
-            initMap(-6.2088, 106.8456);
+            initMap(-6.2088, 106.8456); // Lokasi awal default sebelum GPS lock
 
             navigator.geolocation.watchPosition(
                 (position) => {
@@ -233,13 +248,13 @@
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
-                    // Update Posisi Peta & Penanda Kendaraan secara real-time
+                    // Update Peta secara Real-time
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
-                        map.panTo([lat, lng]); // Peta otomatis geser mengikuti bus jalan
+                        map.panTo([lat, lng]); 
                     }
 
-                    // Filter Akurasi Ruangan (Anti-Goyang)
+                    // Anti guncangan ruangan
                     if (accuracy > 40) {
                         statusMode.innerText = `SINYAL LEMAH • AKURASI: ${Math.round(accuracy)}M`;
                         statusMode.style.color = "#ff453a";
@@ -251,15 +266,12 @@
                         speedMS = 0;
                     }
 
-                    // Konversi m/s ke KM/H
                     let speedKMH = Math.round(speedMS * 3.6);
 
-                    // Threshold Diam (Kunci di angka 0 saat lampu merah / berhenti)
                     if (speedKMH < 3) {
                         speedKMH = 0;
                     }
 
-                    // Update UI Dashboard
                     statusMode.innerText = `SCANIA COCKPIT ONLINE • GPS AKURAT (${Math.round(accuracy)}M)`;
                     statusMode.style.color = "#45a29e";
                     updateScaniaDashboard(speedKMH);
@@ -269,7 +281,7 @@
                     statusMode.style.color = "#ff453a";
                 },
                 {
-                    enableHighAccuracy: true, // Memaksa HP menghidupkan chip hardware GPS
+                    enableHighAccuracy: true,
                     timeout: 10000,
                     maximumAge: 0
                 }
@@ -280,3 +292,4 @@
     </script>
 </body>
 </html>
+
