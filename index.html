@@ -29,7 +29,7 @@
             width: 100%;
         }
 
-        /* Area Peta Google Maps Asli (Tampilan Terang sesuai Gambar) */
+        /* Area Peta Google Maps Asli (Tampilan Terang) */
         #map {
             flex: 1;
             width: 100%;
@@ -206,11 +206,10 @@
             map = L.map('map', {
                 zoomControl: false, 
                 attributionControl: false
-            }).setView([lat, lng], 18); // Zoom tingkat 18 agar rumah dan detail nama kos langsung kelihatan rapat
+            }).setView([lat, lng], 18); // Zoom 18 agar semua tulisan kos dan tempat langsung rapat terlihat
 
-            // SOLUSI: Menggunakan server peta jalan (Roadmap) langsung milik Google Inc.
-            // Dijamin memunculkan semua ikon toko, SPBU, kos-kosan, persis seperti di aplikasi Google Maps Anda.
-            L.tileLayer('https://mt1.googlecom/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            // PERBAIKAN UTAMA: Penulisan mt1.google.com sekarang sudah benar (menggunakan titik)
+            L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                 maxZoom: 22
             }).addTo(map);
 
@@ -224,7 +223,7 @@
 
             marker = L.marker([lat, lng], { icon: googleBlueIcon }).addTo(map);
             
-            // Lingkaran biru transparan penanda jangkauan akurasi (seperti di gambar Anda)
+            // Lingkaran biru transparan penanda jangkauan akurasi
             accuracyCircle = L.circle([lat, lng], {
                 radius: 0,
                 color: '#1a73e8',
@@ -260,7 +259,7 @@
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
                         accuracyCircle.setLatLng([lat, lng]);
-                        accuracyCircle.setRadius(accuracy); // Ukuran lingkaran otomatis melebar/mengecil sesuai kekuatan sinyal HP
+                        accuracyCircle.setRadius(accuracy); 
                         map.panTo([lat, lng]); 
                     }
 
@@ -302,5 +301,5 @@
         }
     </script>
 </body>
-</html>
-
+    </html>
+    
