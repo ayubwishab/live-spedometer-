@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Next-Gen Cockpit Navigation PRO</title>
+    <title>Scania Cockpit Navigation Full Detail</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -29,14 +29,19 @@
             width: 100%;
         }
 
-        /* Area Peta HD - Detail POI (Mall, RS, Kost, dll) */
+        /* Area Peta HD - Memunculkan semua objek (Rumah, Kost, RS, dll) */
         #map {
             flex: 1;
             width: 100%;
             background-color: #1a1e24;
         }
 
-        /* PANEL DASHBOARD SCANIA (Posisi pas di batas atas ideal) */
+        /* Filter CSS Pintar: Mengubah peta standar menjadi Dark Mode tanpa merusak/menghilangkan teks & ikon tempat */
+        .scania-dark-map {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* PANEL DASHBOARD SCANIA BARU */
         .scania-dashboard {
             height: 280px; 
             background: linear-gradient(to top, #06080a 85%, #151b22 100%);
@@ -201,20 +206,20 @@
         let map, marker;
         let mapInitialized = false;
 
-        // Inisialisasi Peta HD dengan Detail POI Lengkap
+        // Inisialisasi Peta HD Resmi OpenStreetMap (Bebas Batasan / Gratis)
         function initMap(lat, lng) {
             map = L.map('map', {
                 zoomControl: false, 
                 attributionControl: false
-            }).setView([lat, lng], 17); // Menggunakan tingkat zoom 17 agar bangunan dan nama kost terlihat jelas
+            }).setView([lat, lng], 18); // Zoom 18 ditingkatkan agar nama Kost, Toko, Rumah, Mall terlihat detail melimpah
 
-            // MENGGUNAKAN STADIA MAPS (ALIDADE SMOOTH DARK) 
-            // Menampilkan nama perumahan, mall, rumah sakit, kost, dan jalan secara tajam dan modern.
-            L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-                maxZoom: 20
+            // Menggunakan Tile Server utama OSM yang di-dark-mode-kan lewat class CSS khusus
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                className: 'scania-dark-map' // Mengaktifkan filter dark mode hemat baterai
             }).addTo(map);
 
-            // Kostumisasi Penanda Kendaraan (Warna Merah Neon agar kontras di peta gelap)
+            // Penanda kendaraan warna merah neon bersinar
             const customIcon = L.divIcon({
                 className: 'custom-marker',
                 html: '<div style="width:16px; height:16px; background:#ff2a2a; border:3px solid #fff; border-radius:50%; box-shadow:0 0 10px #ff2a2a;"></div>',
@@ -226,7 +231,7 @@
             mapInitialized = true;
         }
 
-        // Kontrol pergerakan jarum speedometer
+        // Kontrol rotasi jarum spedometer Scania
         function updateScaniaDashboard(speed) {
             let safeSpeed = Math.min(speed, 120); 
             let degrees = -120 + (safeSpeed * 1.916); 
@@ -235,9 +240,9 @@
             needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // Logika Sinkronisasi Hardware GPS Utama HP
+        // Jalankan pelacakan hardware satelit GPS
         if ('geolocation' in navigator) {
-            initMap(-6.2088, 106.8456); // Titik default awal sebelum GPS terhubung
+            initMap(-6.2088, 106.8456); // Koordinat dummy awal saat web baru dibuka
 
             navigator.geolocation.watchPosition(
                 (position) => {
@@ -246,13 +251,13 @@
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
-                    // Sinkronisasi posisi kendaraan ke peta secara otomatis
+                    // Menggeser peta mengikuti gerak kendaraan secara otomatis
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
                         map.panTo([lat, lng]); 
                     }
 
-                    // Pengunci getaran di dalam ruangan / sinyal buruk
+                    // Filter peredam getaran GPS palsu di dalam ruangan
                     if (accuracy > 40) {
                         statusMode.innerText = `SINYAL LEMAH • AKURASI: ${Math.round(accuracy)}M`;
                         statusMode.style.color = "#ff453a";
@@ -266,7 +271,7 @@
 
                     let speedKMH = Math.round(speedMS * 3.6);
 
-                    // Kunci angka 0 KM/H saat berhenti di lampu merah / macet
+                    // Kunci angka di 0 jika unit dalam kondisi berhenti total
                     if (speedKMH < 3) {
                         speedKMH = 0;
                     }
