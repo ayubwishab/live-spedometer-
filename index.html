@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Speedometer</title>
+    <title>Scania Style Speedometer</title>
     <style>
         * {
             margin: 0;
@@ -12,9 +12,9 @@
         }
 
         body {
-            background-color: #121212;
+            background-color: #0b0c10;
             color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -23,119 +23,179 @@
             overflow: hidden;
         }
 
-        .container {
+        /* Container Utama ala Dashboard Scania */
+        .dashboard-cluster {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Lingkaran Speedometer Luar */
+        .scania-gauge {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 6px solid #1f2833;
+            border-radius: 50%;
+            border-bottom-color: transparent; /* Membuat efek melingkar khas Scania */
+            transform: rotate(-45deg);
+        }
+
+        /* Jarum Speedometer (Aksen Merah Khas Scania) */
+        .pointer-needle {
+            position: absolute;
+            width: 4px;
+            height: 120px;
+            background: linear-gradient(to top, transparent 40%, #ff0000 40%);
+            bottom: 50%;
+            left: calc(50% - 2px);
+            transform-origin: bottom center;
+            transform: rotate(-120deg); /* Angka 0 km/h */
+            transition: transform 0.3s ease-out;
+            z-index: 2;
+        }
+
+        /* Pusat Jarum */
+        .center-node {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: #111;
+            border: 3px solid #ff0000;
+            border-radius: 50%;
+            z-index: 3;
+        }
+
+        /* Kotak MID Digital Tengah */
+        .scania-mid {
+            position: absolute;
+            bottom: 40px;
+            background-color: #050505;
+            border: 2px solid #45a29e;
+            padding: 10px 20px;
+            border-radius: 4px;
             text-align: center;
+            min-width: 140px;
+            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
+            z-index: 4;
         }
 
-        .speed-badge {
-            font-size: 14px;
-            background-color: #222;
-            padding: 6px 12px;
-            border-radius: 20px;
-            color: #888;
-            margin-bottom: 40px;
-            display: inline-block;
-            border: 1px solid #333;
-        }
-
-        .speed-display {
-            font-size: 120px;
+        .digital-speed {
+            font-size: 42px;
             font-weight: bold;
-            color: #00ff66; /* Warna hijau neon sesuai gambar */
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
             line-height: 1;
         }
 
         .unit {
-            font-size: 24px;
-            color: #888;
-            letter-spacing: 2px;
-            margin-top: 10px;
+            font-size: 11px;
+            color: #45a29e;
+            letter-spacing: 1px;
+            margin-top: 4px;
         }
 
-        .error-msg {
-            color: #ff3333;
+        /* Info Tambahan di Atas */
+        .top-info {
+            position: absolute;
+            top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-badge {
             margin-top: 20px;
-            font-size: 14px;
-            max-width: 80%;
+            font-size: 12px;
+            color: #888;
+            background: #1a1a1a;
+            padding: 4px 10px;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="speed-badge" id="accuracy">Akurasi: Menghubungkan GPS...</div>
-        
-        <div class="speed-display" id="speed">0</div>
-        <div class="unit">KM/H</div>
-        
-        <div class="error-msg" id="error"></div>
+    <div class="top-info">Scania Instrument Cluster</div>
+
+    <div class="dashboard-cluster">
+        <div class="scania-gauge"></div>
+        <div class="pointer-needle" id="needle"></div>
+        <div class="center-node"></div>
+
+        <div class="scania-mid">
+            <div class="digital-speed" id="speed-text">0</div>
+            <div class="unit">KM/H</div>
+        </div>
     </div>
 
+    <div class="status-badge" id="status">Mode: Menunggu Sinyal...</div>
+
     <script>
-        const speedEl = document.getElementById('speed');
-        const accuracyEl = document.getElementById('accuracy');
-        const errorEl = document.getElementById('error');
+        const speedText = document.getElementById('speed-text');
+        const needle = document.getElementById('needle');
+        const statusMode = document.getElementById('status');
 
-        // Fungsi utama untuk memantau perubahan posisi (GPS)
-        function initSpeedometer() {
-            if ('geolocation' in navigator) {
-                
-                // Menggunakan watchPosition agar terus memantau pergerakan HP secara live
-                navigator.geolocation.watchPosition(
-                    (position) => {
-                        // Clear error jika berhasil mendeteksi posisi
-                        errorEl.innerText = "";
-
-                        // 1. Ambil kecepatan (dalam meter per detik / m/s)
-                        let speedMS = position.coords.speed;
-
-                        // Jaga-jaga jika sensor mengembalikan nilai null (HP diam/tidak bergerak)
-                        if (speedMS === null || speedMS < 0) {
-                            speedMS = 0;
-                        }
-
-                        // Konversi m/s ke KM/H: (m/s) * 3.6
-                        const speedKMH = Math.round(speedMS * 3.6);
-                        
-                        // Tampilkan kecepatan ke layar
-                        speedEl.innerText = speedKMH;
-
-                        // 2. Ambil tingkat akurasi GPS (dalam meter)
-                        const accuracy = Math.round(position.coords.accuracy);
-                        accuracyEl.innerText = `Akurasi: ${accuracy}m`;
-                    },
-                    (error) => {
-                        // Menangani error jika GPS tidak aktif atau izin ditolak
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorEl.innerText = "Izin GPS ditolak. Mohon izinkan lokasi di browser Anda.";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorEl.innerText = "Informasi lokasi tidak tersedia (Cek GPS HP Anda).";
-                                break;
-                            case error.TIMEOUT:
-                                errorEl.innerText = "Waktu permintaan lokasi habis.";
-                                break;
-                            default:
-                                errorEl.innerText = "Terjadi kesalahan pada GPS.";
-                        }
-                    },
-                    {
-                        // Pengaturan wajib agar otak hardware HP bekerja maksimal:
-                        enableHighAccuracy: true, // Wajib TRUE agar HP menyalakan hardware GPS utama (bukan sekadar seluler/wifi)
-                        timeout: 5000,            // Durasi maksimal mencari sinyal (5 detik)
-                        maximumAge: 0             // Memaksa browser mengambil data posisi paling baru (real-time)
-                    }
-                );
-
-            } else {
-                errorEl.innerText = "Browser Anda tidak mendukung Geolocation API.";
-            }
+        // Batas rotasi jarum (0 km/h = -120deg, 120 km/h = 120deg)
+        function updateScaniaGauge(speed) {
+            // Batasi speed maksimal untuk jarum di angka 120
+            let safeSpeed = Math.min(speed, 120); 
+            
+            // Hitung derajat perputaran jarum
+            let degrees = -120 + (safeSpeed * 2); 
+            
+            // Update Tampilan
+            speedText.innerText = speed;
+            needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // Jalankan fungsi saat web dibuka
-        window.onload = initSpeedometer;
+        // --- SISTEM INDOOR OLEH AKSELEROMETER / MOTION SENSOR ---
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', (event) => {
+                let acc = event.accelerationIncludingGravity;
+                if (!acc) return;
+
+                // Ambil total gerakan dari gabungan sumbu X, Y, Z
+                let totalMovement = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+
+                // Jika sedang di dalam ruangan dan HP digoyang/dibawa jalan di tempat
+                if (totalMovement > 11) { 
+                    statusMode.innerText = "Mode: Indoor (Sensor Gerak)";
+                    statusMode.style.color = "#45a29e";
+                    
+                    // Kalkulasi kecepatan kasaran berdasarkan entakan tangan/saku
+                    let simulatedSpeed = Math.round((totalMovement - 11) * 2);
+                    updateScaniaGauge(simulatedSpeed);
+                }
+            });
+        }
+
+        // --- SISTEM UTAMA OUTDOOR (GPS) ---
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const accuracy = position.coords.accuracy;
+                    let speedMS = position.coords.speed;
+
+                    // Jika akurasi bagus, prioritaskan GPS penuh (Outdoor)
+                    if (accuracy < 25 && speedMS !== null) {
+                        statusMode.innerText = `Mode: Outdoor (GPS Akurat: ${Math.round(accuracy)}m)`;
+                        statusMode.style.color = "#00ff66";
+                        
+                        let speedKMH = Math.round(speedMS * 3.6);
+                        if (speedKMH < 3) speedKMH = 0;
+                        
+                        updateScaniaGauge(speedKMH);
+                    }
+                },
+                (err) => { console.log("Mencari sinyal GPS terbaik..."); },
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        }
     </script>
 </body>
 </html>
-
