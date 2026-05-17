@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Style Speedometer</title>
+    <title>Scania Bus Instrument Cluster</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            background-color: #0b0c10;
+            background-color: #0d0f12;
             color: #ffffff;
             font-family: 'Arial', sans-serif;
             display: flex;
@@ -23,178 +23,218 @@
             overflow: hidden;
         }
 
-        /* Container Utama ala Dashboard Scania */
-        .dashboard-cluster {
+        /* Panel Speedometer Utama */
+        .scania-cluster {
             position: relative;
-            width: 320px;
-            height: 320px;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #15191e 60%, #0b0d10 100%);
+            border: 8px solid #242b35;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* Lingkaran Speedometer Luar */
-        .scania-gauge {
+        /* Garis Melingkar Tempat Angka */
+        .gauge-track {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 6px solid #1f2833;
+            width: 88%;
+            height: 88%;
+            border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 50%;
-            border-bottom-color: transparent; /* Membuat efek melingkar khas Scania */
+            border-bottom-color: transparent;
             transform: rotate(-45deg);
         }
 
-        /* Jarum Speedometer (Aksen Merah Khas Scania) */
+        /* Penempatan Angka Rpm/Speed Scania */
+        .gauge-numbers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 14px;
+            color: #d1d5db;
+        }
+
+        .num {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            line-height: 30px;
+        }
+        /* Posisi presisi angka ala tata letak Scania (-120deg sampai 120deg) */
+        .n0   { top: 235px; left: 60px; }
+        .n20  { top: 145px; left: 30px; }
+        .n40  { top: 65px;  left: 65px; }
+        .n60  { top: 30px;  left: 135px;}
+        .n80  { top: 50px;  left: 210px;}
+        .n100 { top: 115px; left: 265px; color: #ff3b30; } /* Batas kecepatan bus */
+        .n120 { top: 205px; left: 260px; color: #ff3b30; }
+
+        /* Jarum Indikator Merah Solid Khas Scania */
         .pointer-needle {
             position: absolute;
             width: 4px;
-            height: 120px;
-            background: linear-gradient(to top, transparent 40%, #ff0000 40%);
+            height: 135px;
+            background: #ff2a2a;
             bottom: 50%;
             left: calc(50% - 2px);
             transform-origin: bottom center;
-            transform: rotate(-120deg); /* Angka 0 km/h */
-            transition: transform 0.3s ease-out;
-            z-index: 2;
-        }
-
-        /* Pusat Jarum */
-        .center-node {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background-color: #111;
-            border: 3px solid #ff0000;
-            border-radius: 50%;
+            transform: rotate(-120deg); /* Berhenti di angka 0 */
+            transition: transform 0.15s ease-out;
             z-index: 3;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* Kotak MID Digital Tengah */
-        .scania-mid {
+        /* Mangkok / Poros Tengah Jarum Hitam Dof */
+        .center-cap {
             position: absolute;
-            bottom: 40px;
-            background-color: #050505;
-            border: 2px solid #45a29e;
-            padding: 10px 20px;
-            border-radius: 4px;
-            text-align: center;
-            min-width: 140px;
-            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
+            width: 45px;
+            height: 45px;
+            background: #111418;
+            border: 2px solid #3a4451;
+            border-radius: 50%;
             z-index: 4;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Layar MID Digital di Bagian Bawah Bus */
+        .scania-mid-display {
+            position: absolute;
+            bottom: 50px;
+            background-color: #07090c;
+            border: 2px solid #2e3846;
+            width: 130px;
+            padding: 8px 0;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
+            z-index: 5;
         }
 
         .digital-speed {
-            font-size: 42px;
-            font-weight: bold;
+            font-size: 38px;
+            font-weight: 800;
             color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Arial Black', Gadget, sans-serif;
             line-height: 1;
         }
 
         .unit {
-            font-size: 11px;
-            color: #45a29e;
+            font-size: 10px;
+            color: #7b889b;
+            font-weight: bold;
             letter-spacing: 1px;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
-        /* Info Tambahan di Atas */
-        .top-info {
-            position: absolute;
-            top: 30px;
-            font-size: 12px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .status-badge {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #888;
-            background: #1a1a1a;
-            padding: 4px 10px;
+        /* Bar Status Satelit */
+        .satellite-status {
+            margin-top: 30px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #627284;
+            background: #161b22;
+            padding: 6px 16px;
             border-radius: 4px;
+            border: 1px solid #212832;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
 
-    <div class="top-info">Scania Instrument Cluster</div>
+    <div class="scania-cluster">
+        <div class="gauge-track"></div>
+        <div class="gauge-numbers">
+            <div class="num n0">0</div>
+            <div class="num n20">20</div>
+            <div class="num n40">40</div>
+            <div class="num n60">60</div>
+            <div class="num n80">80</div>
+            <div class="num n100">100</div>
+            <div class="num n120">120</div>
+        </div>
 
-    <div class="dashboard-cluster">
-        <div class="scania-gauge"></div>
         <div class="pointer-needle" id="needle"></div>
-        <div class="center-node"></div>
+        <div class="center-cap"></div>
 
-        <div class="scania-mid">
+        <div class="scania-mid-display">
             <div class="digital-speed" id="speed-text">0</div>
-            <div class="unit">KM/H</div>
+            <div class="unit">km/h</div>
         </div>
     </div>
 
-    <div class="status-badge" id="status">Mode: Menunggu Sinyal...</div>
+    <div class="satellite-status" id="status">Mencari Sinyal GPS...</div>
 
     <script>
         const speedText = document.getElementById('speed-text');
         const needle = document.getElementById('needle');
         const statusMode = document.getElementById('status');
 
-        // Batas rotasi jarum (0 km/h = -120deg, 120 km/h = 120deg)
-        function updateScaniaGauge(speed) {
-            // Batasi speed maksimal untuk jarum di angka 120
+        // Fungsi pergerakan jarum presisi sesuai layout angka Scania
+        function updateScaniaDashboard(speed) {
             let safeSpeed = Math.min(speed, 120); 
             
-            // Hitung derajat perputaran jarum
-            let degrees = -120 + (safeSpeed * 2); 
+            // Rumus Kalibrasi Sudut: 
+            // 0 KM/H berada di -120 derajat
+            // 120 KM/H berada di +110 derajat
+            let degrees = -120 + (safeSpeed * 1.916); 
             
-            // Update Tampilan
             speedText.innerText = speed;
             needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // --- SISTEM INDOOR OLEH AKSELEROMETER / MOTION SENSOR ---
-        if (window.DeviceMotionEvent) {
-            window.addEventListener('devicemotion', (event) => {
-                let acc = event.accelerationIncludingGravity;
-                if (!acc) return;
-
-                // Ambil total gerakan dari gabungan sumbu X, Y, Z
-                let totalMovement = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-
-                // Jika sedang di dalam ruangan dan HP digoyang/dibawa jalan di tempat
-                if (totalMovement > 11) { 
-                    statusMode.innerText = "Mode: Indoor (Sensor Gerak)";
-                    statusMode.style.color = "#45a29e";
-                    
-                    // Kalkulasi kecepatan kasaran berdasarkan entakan tangan/saku
-                    let simulatedSpeed = Math.round((totalMovement - 11) * 2);
-                    updateScaniaGauge(simulatedSpeed);
-                }
-            });
-        }
-
-        // --- SISTEM UTAMA OUTDOOR (GPS) ---
+        // SISTEM UTAMA DETEKSI GPS KENDARAAN OUTDOOR
         if ('geolocation' in navigator) {
             navigator.geolocation.watchPosition(
                 (position) => {
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
-                    // Jika akurasi bagus, prioritaskan GPS penuh (Outdoor)
-                    if (accuracy < 25 && speedMS !== null) {
-                        statusMode.innerText = `Mode: Outdoor (GPS Akurat: ${Math.round(accuracy)}m)`;
-                        statusMode.style.color = "#00ff66";
-                        
-                        let speedKMH = Math.round(speedMS * 3.6);
-                        if (speedKMH < 3) speedKMH = 0;
-                        
-                        updateScaniaGauge(speedKMH);
+                    // Filter 1: Jika akurasi jelek/ada di dalam garasi/ruangan
+                    if (accuracy > 40) {
+                        statusMode.innerText = `Sinyal Lemah (Akurasi: ${Math.round(accuracy)}m)`;
+                        statusMode.style.color = "#ff453a";
+                        updateScaniaDashboard(0);
+                        return;
                     }
+
+                    // Menghilangkan nilai minus atau kosong saat bus berhenti
+                    if (speedMS === null || speedMS < 0) {
+                        speedMS = 0;
+                    }
+
+                    // Konversi dari m/s ke KM/H
+                    let speedKMH = Math.round(speedMS * 3.6);
+
+                    // Filter 2: Jika bus diam/berhenti total di terminal atau lampu merah
+                    if (speedKMH < 3) {
+                        speedKMH = 0;
+                    }
+
+                    // Terapkan ke Dashboard
+                    statusMode.innerText = `Scania System Online • GPS Akurat`;
+                    statusMode.style.color = "#30d158";
+                    updateScaniaDashboard(speedKMH);
                 },
-                (err) => { console.log("Mencari sinyal GPS terbaik..."); },
-                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                (err) => {
+                    statusMode.innerText = "GPS Error: Aktifkan Izin Lokasi";
+                    statusMode.style.color = "#ff453a";
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 6000,
+                    maximumAge: 0
+                }
             );
+        } else {
+            statusMode.innerText = "Browser tidak mendukung hardware GPS";
         }
     </script>
 </body>
