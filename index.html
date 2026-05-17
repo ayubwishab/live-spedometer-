@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Next-Gen Cockpit Navigation</title>
+    <title>Scania Next-Gen Cockpit Navigation PRO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -29,14 +29,14 @@
             width: 100%;
         }
 
-        /* Area Peta - Berbagi ruang secara proporsional */
+        /* Area Peta HD - Detail POI (Mall, RS, Kost, dll) */
         #map {
             flex: 1;
             width: 100%;
             background-color: #1a1e24;
         }
 
-        /* BAR SPEEDOMETER DITAIKKAN (Tinggi diubah dari 240px ke 280px agar lebih ke atas) */
+        /* PANEL DASHBOARD SCANIA (Posisi pas di batas atas ideal) */
         .scania-dashboard {
             height: 280px; 
             background: linear-gradient(to top, #06080a 85%, #151b22 100%);
@@ -50,7 +50,7 @@
             z-index: 1000;
         }
 
-        /* Ukuran Lingkaran Speedometer Analog Diperbesar sedikit agar lebih gagah */
+        /* Ukuran Lingkaran Speedometer Analog Scania */
         .scania-cluster {
             position: relative;
             width: 200px;
@@ -117,7 +117,7 @@
             z-index: 4;
         }
 
-        /* Ukuran Layar MID Digital Juga Diperbesar */
+        /* Layar MID Digital */
         .scania-mid-display {
             background: #030507;
             border: 2px solid #45a29e;
@@ -201,34 +201,32 @@
         let map, marker;
         let mapInitialized = false;
 
-        // Inisialisasi Peta
+        // Inisialisasi Peta HD dengan Detail POI Lengkap
         function initMap(lat, lng) {
             map = L.map('map', {
                 zoomControl: false, 
                 attributionControl: false
-            }).setView([lat, lng], 16);
+            }).setView([lat, lng], 17); // Menggunakan tingkat zoom 17 agar bangunan dan nama kost terlihat jelas
 
-            // PERBAIKAN: Menggunakan tile map "Jawg Matrix" / OpenStreetMap dengan teks label jalan lengkap
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                // Menggunakan filter CSS bawaan browser agar petanya otomatis berubah menjadi bergaya malam (Dark-Mode) namun teks nama jalan tetap terlihat jelas kontras putih.
-                className: 'dark-map-tiles'
+            // MENGGUNAKAN STADIA MAPS (ALIDADE SMOOTH DARK) 
+            // Menampilkan nama perumahan, mall, rumah sakit, kost, dan jalan secara tajam dan modern.
+            L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
             }).addTo(map);
 
-            // Inject CSS filter langsung agar peta berwarna gelap tanpa menghilangkan tulisan nama jalan
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .dark-map-tiles {
-                    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-                }
-            `;
-            document.head.appendChild(style);
+            // Kostumisasi Penanda Kendaraan (Warna Merah Neon agar kontras di peta gelap)
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: '<div style="width:16px; height:16px; background:#ff2a2a; border:3px solid #fff; border-radius:50%; box-shadow:0 0 10px #ff2a2a;"></div>',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
 
-            marker = L.marker([lat, lng]).addTo(map);
+            marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
             mapInitialized = true;
         }
 
-        // Fungsi update dashboard Scania (0 km/h = -120deg, 120 km/h = 110deg)
+        // Kontrol pergerakan jarum speedometer
         function updateScaniaDashboard(speed) {
             let safeSpeed = Math.min(speed, 120); 
             let degrees = -120 + (safeSpeed * 1.916); 
@@ -237,9 +235,9 @@
             needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // Deteksi GPS HP
+        // Logika Sinkronisasi Hardware GPS Utama HP
         if ('geolocation' in navigator) {
-            initMap(-6.2088, 106.8456); // Lokasi awal default sebelum GPS lock
+            initMap(-6.2088, 106.8456); // Titik default awal sebelum GPS terhubung
 
             navigator.geolocation.watchPosition(
                 (position) => {
@@ -248,13 +246,13 @@
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
-                    // Update Peta secara Real-time
+                    // Sinkronisasi posisi kendaraan ke peta secara otomatis
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
                         map.panTo([lat, lng]); 
                     }
 
-                    // Anti guncangan ruangan
+                    // Pengunci getaran di dalam ruangan / sinyal buruk
                     if (accuracy > 40) {
                         statusMode.innerText = `SINYAL LEMAH • AKURASI: ${Math.round(accuracy)}M`;
                         statusMode.style.color = "#ff453a";
@@ -268,6 +266,7 @@
 
                     let speedKMH = Math.round(speedMS * 3.6);
 
+                    // Kunci angka 0 KM/H saat berhenti di lampu merah / macet
                     if (speedKMH < 3) {
                         speedKMH = 0;
                     }
@@ -292,4 +291,3 @@
     </script>
 </body>
 </html>
-
