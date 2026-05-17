@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Cockpit Real Google Maps PRO</title>
+    <title>Scania Cockpit Ultra Smooth Navigation</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -36,7 +36,7 @@
             background-color: #e5e3df;
         }
 
-        /* PANEL DASHBOARD SCANIA (Tinggi dinaikkan ke 320px & Gradasi Dihapus) */
+        /* PANEL DASHBOARD SCANIA (Tinggi 320px & Tanpa Gradasi Atas) */
         .scania-dashboard {
             height: 320px; 
             background: #06080a;
@@ -46,7 +46,7 @@
             justify-content: space-evenly;
             padding: 15px 10px;
             position: relative;
-            z-index: 1000; /* Tanpa box-shadow/gradasi atas */
+            z-index: 1000;
         }
 
         /* Ukuran Lingkaran Speedometer Analog Scania */
@@ -91,6 +91,7 @@
         .n100 { top: 78px;  left: 170px; color: #ff453a;}
         .n120 { top: 142px; left: 155px; color: #ff453a; }
 
+        /* Jarum presisi tinggi tanpa delay CSS kaku */
         .pointer-needle {
             position: absolute;
             width: 4px;
@@ -100,9 +101,9 @@
             left: calc(50% - 2px);
             transform-origin: bottom center;
             transform: rotate(-120deg);
-            transition: transform 0.2s ease-out;
             z-index: 3;
             box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            will-change: transform; /* Optimalisasi performa render HP */
         }
 
         .center-cap {
@@ -199,7 +200,11 @@
         let map, marker, accuracyCircle;
         let mapInitialized = false;
 
-        // Inisialisasi Google Maps Asli Terang
+        // Variabel untuk Interpolasi Mulus (Lerp)
+        let currentSpeed = 0;
+        let targetSpeed = 0;
+
+        // 1. Inisialisasi Google Maps Asli Terang
         function initMap(lat, lng) {
             map = L.map('map', {
                 zoomControl: false, 
@@ -223,23 +228,39 @@
                 radius: 0,
                 color: '#1a73e8',
                 fillColor: '#1a73e8',
-                fillOpacity: 0.15,
+                fillOpacity: 0.12,
                 weight: 1
             }).addTo(map);
 
             mapInitialized = true;
         }
 
-        function updateScaniaDashboard(speed) {
-            let safeSpeed = Math.min(speed, 120); 
+        // 2. Mesin Utama Animasi Mulus (Mengeliminasi Efek Nyendat-nyendat)
+        function smoothEngine() {
+            // Formula Lerp: Nilai 0.08 adalah tingkat kelembutan redaman getaran jarum
+            currentSpeed += (targetSpeed - currentSpeed) * 0.08;
+
+            if (Math.abs(targetSpeed - currentSpeed) < 0.1) {
+                currentSpeed = targetSpeed;
+            }
+
+            // Hitung Sudut Jarum Scania secara real-time
+            let safeSpeed = Math.min(currentSpeed, 120); 
             let degrees = -120 + (safeSpeed * 1.916); 
             
-            speedText.innerText = speed;
+            // Render Visual Perubahan Jarum dan Angka Digital secara konstan (60 FPS+)
             needle.style.transform = `rotate(${degrees}deg)`;
-        }
+            speedText.innerText = Math.round(currentSpeed);
 
+            requestAnimationFrame(smoothEngine);
+        }
+        
+        // Aktifkan mesin animasi halus sejak web pertama kali dibuka
+        requestAnimationFrame(smoothEngine);
+
+        // 3. Sinkronisasi Data Hardware Sensor GPS HP
         if ('geolocation' in navigator) {
-            initMap(-6.2088, 106.8456); 
+            initMap(-6.2088, 106.8456); // Koordinat stand-by awal
 
             navigator.geolocation.watchPosition(
                 (position) => {
@@ -248,17 +269,23 @@
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
+                    // Menggeser Peta Menggunakan Durasi Animasi yang Dioptimalkan (0.8 detik)
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
                         accuracyCircle.setLatLng([lat, lng]);
                         accuracyCircle.setRadius(accuracy); 
-                        map.panTo([lat, lng]); 
+                        
+                        map.setView([lat, lng], 18, {
+                            animate: true,
+                            duration: 0.8
+                        }); 
                     }
 
+                    // Filter Redam Getaran Saat HP Sinyal Buruk
                     if (accuracy > 50) {
                         statusMode.innerText = `AKURASI RENDAH (${Math.round(accuracy)}M) • UTAMAKAN OUTDOOR`;
                         statusMode.style.color = "#ff453a";
-                        updateScaniaDashboard(0);
+                        targetSpeed = 0;
                         return;
                     }
 
@@ -268,13 +295,16 @@
 
                     let speedKMH = Math.round(speedMS * 3.6);
 
+                    // Threshold Kunci Diam di 0 KM/H saat berhenti / lampu merah
                     if (speedKMH < 3) {
                         speedKMH = 0;
                     }
 
+                    // Kirim data asli ke targetSpeed untuk diproses oleh smoothEngine
+                    targetSpeed = speedKMH;
+
                     statusMode.innerText = `SCANIA COCKPIT ONLINE • GOOGLE MAPS LIVE`;
                     statusMode.style.color = "#45a29e";
-                    updateScaniaDashboard(speedKMH);
                 },
                 (err) => {
                     statusMode.innerText = "GPS ERROR: AKTIFKAN LOKASI HP DAN AKSES HTTPS";
