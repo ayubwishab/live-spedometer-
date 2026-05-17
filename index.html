@@ -3,245 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Speedometer & GPS Tracker</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+    <title>Live Speedometer</title>
     <style>
-        :root {
-            --primary: #00ff88;
-            --bg: #121212;
-            --panel: rgba(30, 30, 30, 0.9);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            margin: 0;
+            background-color: #121212;
+            color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg);
-            color: white;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-        }
-
-        /* Speedometer Section */
-        #dashboard {
-            height: 40%;
-            display: flex;
-            justify-content: center;
             align-items: center;
-            background: linear-gradient(180deg, #1e1e1e 0%, #121212 100%);
-            position: relative;
-            z-index: 10;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .speed-container {
+        .container {
             text-align: center;
         }
 
-        .speed-value {
-            font-size: 80px;
+        .speed-badge {
+            font-size: 14px;
+            background-color: #222;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #888;
+            margin-bottom: 40px;
+            display: inline-block;
+            border: 1px solid #333;
+        }
+
+        .speed-display {
+            font-size: 120px;
             font-weight: bold;
-            color: var(--primary);
+            color: #00ff66; /* Warna hijau neon sesuai gambar */
             line-height: 1;
         }
 
-        .speed-unit {
-            font-size: 20px;
+        .unit {
+            font-size: 24px;
             color: #888;
             letter-spacing: 2px;
+            margin-top: 10px;
         }
 
-        /* Map Section */
-        #map {
-            flex-grow: 1;
-            z-index: 5;
-        }
-
-        /* Controls */
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        button {
-            background: var(--panel);
-            color: white;
-            border: 1px solid #444;
-            padding: 12px;
-            border-radius: 50%;
-            cursor: pointer;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: 0.3s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        button.active {
-            background: var(--primary);
-            color: black;
-            border-color: var(--primary);
-        }
-
-        .status-badge {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: var(--panel);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 1000;
-            border: 1px solid #333;
+        .error-msg {
+            color: #ff3333;
+            margin-top: 20px;
+            font-size: 14px;
+            max-width: 80%;
         }
     </style>
 </head>
 <body>
 
-    <div id="dashboard">
-        <div class="speed-container">
-            <div id="speedText" class="speed-value">0</div>
-            <div class="speed-unit">KM/H</div>
-        </div>
-        <div class="status-badge" id="status">GPS: Menunggu Sinyal...</div>
+    <div class="container">
+        <div class="speed-badge" id="accuracy">Akurasi: Menghubungkan GPS...</div>
+        
+        <div class="speed-display" id="speed">0</div>
+        <div class="unit">KM/H</div>
+        
+        <div class="error-msg" id="error"></div>
     </div>
-
-    <div id="map"></div>
-
-    <div class="controls">
-        <button id="lockBtn" class="active" title="Kunci Posisi">
-            📍
-        </button>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        /**
-         * 1. ALGORITMA KALMAN FILTER
-         */
-        class KalmanFilter {
-            constructor(q = 0.0001, r = 0.001) {
-                this.q = q; // Process noise
-                this.r = r; // Measurement noise
-                this.x = null; // Estimated value
-                this.p = 1;    // Estimation error
-            }
+        const speedEl = document.getElementById('speed');
+        const accuracyEl = document.getElementById('accuracy');
+        const errorEl = document.getElementById('error');
 
-            filter(measurement) {
-                if (this.x === null) {
-                    this.x = measurement;
-                    return measurement;
-                }
-                this.p = this.p + this.q;
-                let k = this.p / (this.p + this.r);
-                this.x = this.x + k * (measurement - this.x);
-                this.p = (1 - k) * this.p;
-                return this.x;
-            }
-        }
+        // Fungsi utama untuk memantau perubahan posisi (GPS)
+        function initSpeedometer() {
+            if ('geolocation' in navigator) {
+                
+                // Menggunakan watchPosition agar terus memantau pergerakan HP secara live
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        // Clear error jika berhasil mendeteksi posisi
+                        errorEl.innerText = "";
 
-        // Inisialisasi Filter untuk Lat dan Lng
-        const latFilter = new KalmanFilter();
-        const lngFilter = new KalmanFilter();
+                        // 1. Ambil kecepatan (dalam meter per detik / m/s)
+                        let speedMS = position.coords.speed;
 
-        /**
-         * 2. INISIALISASI PETA (LEAFLET)
-         */
-        const map = L.map('map', {
-            zoomControl: false 
-        }).setView([0, 0], 2);
+                        // Jaga-jaga jika sensor mengembalikan nilai null (HP diam/tidak bergerak)
+                        if (speedMS === null || speedMS < 0) {
+                            speedMS = 0;
+                        }
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
+                        // Konversi m/s ke KM/H: (m/s) * 3.6
+                        const speedKMH = Math.round(speedMS * 3.6);
+                        
+                        // Tampilkan kecepatan ke layar
+                        speedEl.innerText = speedKMH;
 
-        let pathLine = L.polyline([], {color: '#00ff88', weight: 4}).addTo(map);
-        let userMarker = L.circleMarker([0,0], {
-            radius: 8,
-            fillColor: "#00ff88",
-            color: "#fff",
-            weight: 2,
-            fillOpacity: 1
-        }).addTo(map);
-
-        /**
-         * 3. LOGIKA LOCK TO POSITION
-         */
-        let isLocked = true;
-        const lockBtn = document.getElementById('lockBtn');
-
-        lockBtn.addEventListener('click', () => {
-            isLocked = !isLocked;
-            lockBtn.classList.toggle('active', isLocked);
-            if(isLocked) {
-                const center = userMarker.getLatLng();
-                if(center.lat !== 0) map.panTo(center);
-            }
-        });
-
-        // Jika user menggeser peta secara manual, matikan lock
-        map.on('dragstart', () => {
-            isLocked = false;
-            lockBtn.classList.remove('active');
-        });
-
-        /**
-         * 4. GEOLOCATION TRACKING
-         */
-        const speedText = document.getElementById('speedText');
-        const statusBadge = document.getElementById('status');
-
-        if ("geolocation" in navigator) {
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    const rawLat = position.coords.latitude;
-                    const rawLng = position.coords.longitude;
-                    
-                    // Gunakan Kalman Filter
-                    const sLat = latFilter.filter(rawLat);
-                    const sLng = lngFilter.filter(rawLng);
-                    const newPos = [sLat, sLng];
-
-                    // Update UI Kecepatan (m/s ke km/h)
-                    let speed = position.coords.speed || 0; 
-                    if (speed < 0) speed = 0;
-                    const kmh = Math.round(speed * 3.6);
-                    speedText.innerText = kmh;
-
-                    // Update Marker & Jalur
-                    userMarker.setLatLng(newPos);
-                    pathLine.addLatLng(newPos);
-
-                    // Update Peta jika di-lock
-                    if (isLocked) {
-                        map.setView(newPos, 17);
+                        // 2. Ambil tingkat akurasi GPS (dalam meter)
+                        const accuracy = Math.round(position.coords.accuracy);
+                        accuracyEl.innerText = `Akurasi: ${accuracy}m`;
+                    },
+                    (error) => {
+                        // Menangani error jika GPS tidak aktif atau izin ditolak
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorEl.innerText = "Izin GPS ditolak. Mohon izinkan lokasi di browser Anda.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorEl.innerText = "Informasi lokasi tidak tersedia (Cek GPS HP Anda).";
+                                break;
+                            case error.TIMEOUT:
+                                errorEl.innerText = "Waktu permintaan lokasi habis.";
+                                break;
+                            default:
+                                errorEl.innerText = "Terjadi kesalahan pada GPS.";
+                        }
+                    },
+                    {
+                        // Pengaturan wajib agar otak hardware HP bekerja maksimal:
+                        enableHighAccuracy: true, // Wajib TRUE agar HP menyalakan hardware GPS utama (bukan sekadar seluler/wifi)
+                        timeout: 5000,            // Durasi maksimal mencari sinyal (5 detik)
+                        maximumAge: 0             // Memaksa browser mengambil data posisi paling baru (real-time)
                     }
+                );
 
-                    statusBadge.innerText = `Akurasi: ${Math.round(position.coords.accuracy)}m`;
-                },
-                (err) => {
-                    statusBadge.innerText = "Error: " + err.message;
-                },
-                {
-                    enableHighAccuracy: true,
-                    maximumAge: 1000,
-                    timeout: 5000
-                }
-            );
-        } else {
-            statusBadge.innerText = "Geolocation tidak didukung browser ini.";
+            } else {
+                errorEl.innerText = "Browser Anda tidak mendukung Geolocation API.";
+            }
         }
+
+        // Jalankan fungsi saat web dibuka
+        window.onload = initSpeedometer;
     </script>
 </body>
 </html>
