@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scania Cockpit Navigation Full Detail</title>
+    <title>Scania Cockpit Real Google Maps</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -29,19 +29,14 @@
             width: 100%;
         }
 
-        /* Area Peta HD - Memunculkan semua objek (Rumah, Kost, RS, dll) */
+        /* Area Peta Google Maps Asli (Tampilan Terang sesuai Gambar) */
         #map {
             flex: 1;
             width: 100%;
-            background-color: #1a1e24;
+            background-color: #e5e3df;
         }
 
-        /* Filter CSS Pintar: Mengubah peta standar menjadi Dark Mode tanpa merusak/menghilangkan teks & ikon tempat */
-        .scania-dark-map {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-        }
-
-        /* PANEL DASHBOARD SCANIA BARU */
+        /* PANEL DASHBOARD SCANIA MODERN (Bagian Bawah) */
         .scania-dashboard {
             height: 280px; 
             background: linear-gradient(to top, #06080a 85%, #151b22 100%);
@@ -203,35 +198,45 @@
         const needle = document.getElementById('needle');
         const statusMode = document.getElementById('status');
 
-        let map, marker;
+        let map, marker, accuracyCircle;
         let mapInitialized = false;
 
-        // Inisialisasi Peta HD Resmi OpenStreetMap (Bebas Batasan / Gratis)
+        // Inisialisasi Google Maps Asli Terang
         function initMap(lat, lng) {
             map = L.map('map', {
                 zoomControl: false, 
                 attributionControl: false
-            }).setView([lat, lng], 18); // Zoom 18 ditingkatkan agar nama Kost, Toko, Rumah, Mall terlihat detail melimpah
+            }).setView([lat, lng], 18); // Zoom tingkat 18 agar rumah dan detail nama kos langsung kelihatan rapat
 
-            // Menggunakan Tile Server utama OSM yang di-dark-mode-kan lewat class CSS khusus
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                className: 'scania-dark-map' // Mengaktifkan filter dark mode hemat baterai
+            // SOLUSI: Menggunakan server peta jalan (Roadmap) langsung milik Google Inc.
+            // Dijamin memunculkan semua ikon toko, SPBU, kos-kosan, persis seperti di aplikasi Google Maps Anda.
+            L.tileLayer('https://mt1.googlecom/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                maxZoom: 22
             }).addTo(map);
 
-            // Penanda kendaraan warna merah neon bersinar
-            const customIcon = L.divIcon({
-                className: 'custom-marker',
-                html: '<div style="width:16px; height:16px; background:#ff2a2a; border:3px solid #fff; border-radius:50%; box-shadow:0 0 10px #ff2a2a;"></div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
+            // Membuat penanda posisi persis bulat biru khas Google Maps asli
+            const googleBlueIcon = L.divIcon({
+                className: 'google-marker',
+                html: '<div style="width:18px; height:18px; background:#1a73e8; border:3px solid #fff; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
             });
 
-            marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+            marker = L.marker([lat, lng], { icon: googleBlueIcon }).addTo(map);
+            
+            // Lingkaran biru transparan penanda jangkauan akurasi (seperti di gambar Anda)
+            accuracyCircle = L.circle([lat, lng], {
+                radius: 0,
+                color: '#1a73e8',
+                fillColor: '#1a73e8',
+                fillOpacity: 0.15,
+                weight: 1
+            }).addTo(map);
+
             mapInitialized = true;
         }
 
-        // Kontrol rotasi jarum spedometer Scania
+        // Kontrol rotasi jarum speedometer
         function updateScaniaDashboard(speed) {
             let safeSpeed = Math.min(speed, 120); 
             let degrees = -120 + (safeSpeed * 1.916); 
@@ -240,9 +245,9 @@
             needle.style.transform = `rotate(${degrees}deg)`;
         }
 
-        // Jalankan pelacakan hardware satelit GPS
+        // Sinkronisasi penuh dengan sensor GPS HP Anda
         if ('geolocation' in navigator) {
-            initMap(-6.2088, 106.8456); // Koordinat dummy awal saat web baru dibuka
+            initMap(-6.2088, 106.8456); // Titik awal sebelum GPS aktif
 
             navigator.geolocation.watchPosition(
                 (position) => {
@@ -251,15 +256,17 @@
                     const accuracy = position.coords.accuracy;
                     let speedMS = position.coords.speed;
 
-                    // Menggeser peta mengikuti gerak kendaraan secara otomatis
+                    // Menggerakkan peta dan lingkaran akurasi secara berkala mengikuti jalan kendaraan
                     if (mapInitialized) {
                         marker.setLatLng([lat, lng]);
+                        accuracyCircle.setLatLng([lat, lng]);
+                        accuracyCircle.setRadius(accuracy); // Ukuran lingkaran otomatis melebar/mengecil sesuai kekuatan sinyal HP
                         map.panTo([lat, lng]); 
                     }
 
-                    // Filter peredam getaran GPS palsu di dalam ruangan
-                    if (accuracy > 40) {
-                        statusMode.innerText = `SINYAL LEMAH • AKURASI: ${Math.round(accuracy)}M`;
+                    // Pengunci getaran angka saat berada di dalam ruangan
+                    if (accuracy > 50) {
+                        statusMode.innerText = `AKURASI RENDAH (${Math.round(accuracy)}M) • UTAMAKAN OUTDOOR`;
                         statusMode.style.color = "#ff453a";
                         updateScaniaDashboard(0);
                         return;
@@ -271,17 +278,17 @@
 
                     let speedKMH = Math.round(speedMS * 3.6);
 
-                    // Kunci angka di 0 jika unit dalam kondisi berhenti total
+                    // Paksa angka jadi 0 jika unit dalam kondisi berhenti total di jalan
                     if (speedKMH < 3) {
                         speedKMH = 0;
                     }
 
-                    statusMode.innerText = `SCANIA COCKPIT ONLINE • GPS AKURAT (${Math.round(accuracy)}M)`;
+                    statusMode.innerText = `SCANIA COCKPIT ONLINE • GOOGLE MAPS LIVE`;
                     statusMode.style.color = "#45a29e";
                     updateScaniaDashboard(speedKMH);
                 },
                 (err) => {
-                    statusMode.innerText = "GPS ERROR: AKTIFKAN LOKASI HP";
+                    statusMode.innerText = "GPS ERROR: AKTIFKAN LOKASI HP DAN AKSES HTTPS";
                     statusMode.style.color = "#ff453a";
                 },
                 {
@@ -296,3 +303,4 @@
     </script>
 </body>
 </html>
+
